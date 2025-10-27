@@ -1,7 +1,7 @@
 ![](assets/lolv1.gif)
 ![](assets/lsrw.gif)
 ![](assets/DarkFace.gif)
-![](assets/NonPaired.gif)
+![](assets/NonPair.gif)
 # BCC‑LabNet：低光照图像增强（Lab & Retinex）
 
 > 本仓库包含 **BCC‑LabNet** 的训练、验证、测试与数据合成脚本，用于在低光照场景下对图像进行增强与细节恢复。模型在 Lab 颜色空间进行建模，并结合 Retinex 思想与注意力模块以提升亮度与色度一致性。
