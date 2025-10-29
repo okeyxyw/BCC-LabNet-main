@@ -41,7 +41,7 @@
 
 ```bash
 conda env create -f BCC.yml
-conda activate base
+conda activate bcc
 ```
 
 > Key deps: PyTorch, `pytorch-msssim`, `opencv-python`, `pyiqa` (NIQE), `torchvision`.
