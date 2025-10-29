@@ -10,7 +10,7 @@
 ![](assets/DarkFace.gif)
 ![](assets/NonPair.gif)
 
-# BCC-LabNet：面向可解释与强泛化的解耦低光照图像增强网络
+# BCC-LabNet: A Decoupled Low-Light Image Enhancement Network for Interpretability and Strong Generalization
 
 > Training/validation/testing and synthesis scripts for **BCC‑LabNet**. The model operates in the **Lab** space, combining **Retinex** and attention to improve luminance/chroma consistency.
 
