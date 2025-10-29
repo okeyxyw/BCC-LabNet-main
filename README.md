@@ -42,7 +42,7 @@
 
 ```bash
 conda env create -f BCC.yml
-conda activate base
+conda activate bcc
 ```
 
 > 关键依赖：PyTorch、`pytorch-msssim`、`opencv-python`、`pyiqa`（用于 NIQE 指标）、`torchvision` 等。
