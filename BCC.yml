@@ -1,4 +1,4 @@
-name: base
+name: bcc
 channels:
   - defaults
   - conda-forge
