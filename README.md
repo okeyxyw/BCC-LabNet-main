@@ -4,7 +4,7 @@
 **中文** ｜ [English](README_EN.md)
 
 </div>
-
+---
 ![](assets/lolv1.gif)
 ![](assets/lsrw.gif)
 ![](assets/DarkFace.gif)
