@@ -575,379 +575,62 @@ class Final_PatchExpand2D(nn.Module):
 
         return x
 
-
 class SS2D(nn.Module):
-    def __init__(
-            self,
-            d_model,
-            d_state=16,
-            # d_state="auto", # 20240109
-            d_conv=3,  ## 原来是3
-            expand=2,  ## 原来是2
-            dt_rank="auto",
-            dt_min=0.001,
-            dt_max=0.1,
-            dt_init="random",
-            dt_scale=1.0,
-            dt_init_floor=1e-4,
-            dropout=0.,
-            conv_bias=True,
-            bias=False,
-            device=None,
-            dtype=None,
-            scan_type='hl',
-            **kwargs,
-    ):
-        factory_kwargs = {"device": device, "dtype": dtype}
+    def __init__(self, d_model, d_state=16, expand=2, dropout=0.):
         super().__init__()
         self.d_model = d_model
-        self.d_state = d_state
-        # self.d_state = math.ceil(self.d_model / 6) if d_state == "auto" else d_model # 20240109
-        self.d_conv = d_conv
-        self.expand = expand
-        self.d_inner = int(self.expand * self.d_model)
-        self.dt_rank = math.ceil(self.d_model / 16) if dt_rank == "auto" else dt_rank
-        self.scantype = scan_type
-        self.in_proj = nn.Linear(self.d_model, self.d_inner * 2, bias=bias, **factory_kwargs)
-        self.conv2d = nn.Conv2d(
-            in_channels=self.d_inner,
-            out_channels=self.d_inner,
-            groups=self.d_inner,
-            bias=conv_bias,
-            kernel_size=d_conv,
-            padding=(d_conv - 1) // 2,
-            **factory_kwargs,
+        self.d_inner = int(expand * d_model)
+
+        # 简化投影层
+        self.in_proj = nn.Linear(d_model, self.d_inner * 2)
+
+        # 轻量卷积
+        self.conv = nn.Conv2d(
+            self.d_inner, self.d_inner, kernel_size=3,
+            padding=1, groups=self.d_inner, bias=True
         )
-        self.act = nn.SiLU()
 
-        # ************************************ hl weight *****************************************
-        self.x_proj_hl = (
-            nn.Linear(self.d_inner, (self.dt_rank + self.d_state * 2), bias=False, **factory_kwargs),
-            nn.Linear(self.d_inner, (self.dt_rank + self.d_state * 2), bias=False, **factory_kwargs),
+        # 简化状态机制
+        self.state_proj = nn.Linear(self.d_inner, d_state * 2)
+        self.state_transform = nn.Sequential(
+            nn.Linear(d_state, d_state),
+            nn.SiLU(),
+            nn.Linear(d_state, self.d_inner)
         )
-        self.x_proj_hl_weight = nn.Parameter(torch.stack([t.weight for t in self.x_proj_hl], dim=0))  # (K=2, N, inner)
-        del self.x_proj_hl
-        self.dt_hl_projs = (
-            self.dt_init(self.dt_rank, self.d_inner, dt_scale, dt_init, dt_min, dt_max, dt_init_floor,
-                         **factory_kwargs),
-            self.dt_init(self.dt_rank, self.d_inner, dt_scale, dt_init, dt_min, dt_max, dt_init_floor,
-                         **factory_kwargs),
-        )
-        self.dt_projs_hl_weight = nn.Parameter(
-            torch.stack([t.weight for t in self.dt_hl_projs], dim=0))  # (K=2, inner, rank)
-        self.dt_projs_hl_bias = nn.Parameter(torch.stack([t.bias for t in self.dt_hl_projs], dim=0))  # (K=2, inner)
-        del self.dt_hl_projs
-        self.A_logs_hl = self.A_log_init(self.d_state, self.d_inner, copies=2, merge=True)  # (K=2, D, N)
-        self.Ds_hl = self.D_init(self.d_inner, copies=2, merge=True)  # (K=2, D, N)
-        # ************************************ hl weight *****************************************
 
-        # ************************************ lh weight *****************************************
-        self.x_proj_lh = (
-            nn.Linear(self.d_inner, (self.dt_rank + self.d_state * 2), bias=False, **factory_kwargs),
-            nn.Linear(self.d_inner, (self.dt_rank + self.d_state * 2), bias=False, **factory_kwargs),
-        )
-        self.x_proj_lh_weight = nn.Parameter(torch.stack([t.weight for t in self.x_proj_lh], dim=0))  # (K=2, N, inner)
-        del self.x_proj_lh
-        self.dt_lh_projs = (
-            self.dt_init(self.dt_rank, self.d_inner, dt_scale, dt_init, dt_min, dt_max, dt_init_floor,
-                         **factory_kwargs),
-            self.dt_init(self.dt_rank, self.d_inner, dt_scale, dt_init, dt_min, dt_max, dt_init_floor,
-                         **factory_kwargs),
-        )
-        self.dt_projs_lh_weight = nn.Parameter(
-            torch.stack([t.weight for t in self.dt_lh_projs], dim=0))  # (K=2, inner, rank)
-        self.dt_projs_lh_bias = nn.Parameter(torch.stack([t.bias for t in self.dt_lh_projs], dim=0))  # (K=2, inner)
-        del self.dt_lh_projs
-        self.A_logs_lh = self.A_log_init(self.d_state, self.d_inner, copies=2, merge=True)  # (K=2, D, N)
-        self.Ds_lh = self.D_init(self.d_inner, copies=2, merge=True)  # (K=2, D, N)
-        # ************************************ lh weight *****************************************
+        self.out_norm = nn.LayerNorm(self.d_inner)
+        self.out_proj = nn.Linear(self.d_inner, d_model)
+        self.dropout = nn.Dropout(dropout) if dropout > 0 else nn.Identity()
 
-        # ************************************ hh weight *****************************************
-        self.x_proj_hh = (
-            nn.Linear(self.d_inner, (self.dt_rank + self.d_state * 2), bias=False, **factory_kwargs),
-            nn.Linear(self.d_inner, (self.dt_rank + self.d_state * 2), bias=False, **factory_kwargs),
-        )
-        self.x_proj_hh_weight = nn.Parameter(torch.stack([t.weight for t in self.x_proj_hh], dim=0))  # (K=2, N, inner)
-        del self.x_proj_hh
-        self.dt_hh_projs = (
-            self.dt_init(self.dt_rank, self.d_inner, dt_scale, dt_init, dt_min, dt_max, dt_init_floor,
-                         **factory_kwargs),
-            self.dt_init(self.dt_rank, self.d_inner, dt_scale, dt_init, dt_min, dt_max, dt_init_floor,
-                         **factory_kwargs),
-        )
-        self.dt_projs_hh_weight = nn.Parameter(
-            torch.stack([t.weight for t in self.dt_hh_projs], dim=0))  # (K=2, inner, rank)
-        self.dt_projs_hh_bias = nn.Parameter(torch.stack([t.bias for t in self.dt_hh_projs], dim=0))  # (K=2, inner)
-        del self.dt_hh_projs
-        self.A_logs_hh = self.A_log_init(self.d_state, self.d_inner, copies=2, merge=True)  # (K=2, D, N)
-        self.Ds_hh = self.D_init(self.d_inner, copies=2, merge=True)  # (K=2, D, N)
-        # ************************************ hh weight *****************************************
+    def forward(self, x):
+        B, H, W, C = x.shape
 
-        # ----------------------------------------------------------------------------------------------------------------
-        # self.x_proj = (
-        #     nn.Linear(self.d_inner, (self.dt_rank + self.d_state * 2), bias=False, **factory_kwargs),
-        #     nn.Linear(self.d_inner, (self.dt_rank + self.d_state * 2), bias=False, **factory_kwargs),
-        #     nn.Linear(self.d_inner, (self.dt_rank + self.d_state * 2), bias=False, **factory_kwargs),
-        #     nn.Linear(self.d_inner, (self.dt_rank + self.d_state * 2), bias=False, **factory_kwargs),
-        # )
-        # self.x_proj_weight = nn.Parameter(torch.stack([t.weight for t in self.x_proj], dim=0)) # (K=4, N, inner)
-        #
-        # del self.x_proj_hl
-        # del self.x_proj
-        #
-        # self.dt_projs = (
-        #     self.dt_init(self.dt_rank, self.d_inner, dt_scale, dt_init, dt_min, dt_max, dt_init_floor, **factory_kwargs),
-        #     self.dt_init(self.dt_rank, self.d_inner, dt_scale, dt_init, dt_min, dt_max, dt_init_floor, **factory_kwargs),
-        #     self.dt_init(self.dt_rank, self.d_inner, dt_scale, dt_init, dt_min, dt_max, dt_init_floor, **factory_kwargs),
-        #     self.dt_init(self.dt_rank, self.d_inner, dt_scale, dt_init, dt_min, dt_max, dt_init_floor, **factory_kwargs),
-        # )
-        # self.dt_projs_weight = nn.Parameter(torch.stack([t.weight for t in self.dt_projs], dim=0)) # (K=4, inner, rank)
-        # self.dt_projs_bias = nn.Parameter(torch.stack([t.bias for t in self.dt_projs], dim=0)) # (K=4, inner)
-        # del self.dt_projs
-        #
-        # self.A_logs = self.A_log_init(self.d_state, self.d_inner, copies=4, merge=True) # (K=4, D, N)
-        # self.Ds = self.D_init(self.d_inner, copies=4, merge=True) # (K=4, D, N)
-        # ----------------------------------------------------------------------------------------------------------------
+        # 输入投影
+        xz = self.in_proj(x)
+        x, z = xz.chunk(2, dim=-1)
 
-        # self.selective_scan = selective_scan_fn
-        self.forward_corehl = self.forward_corehl
-        self.forward_corelh = self.forward_corelh
-        self.forward_corehh = self.forward_corehh
-        self.diagonal_trans = self.diagonal_trans
-        self.reverse_diagonal_trans = self.reverse_diagonal_trans
-        # self.forward_core = self.forward_corev0
+        # 空间处理
+        x = x.permute(0, 3, 1, 2)
+        x = F.silu(self.conv(x))
 
-        self.out_normhl = nn.LayerNorm(self.d_inner)
-        self.out_projhl = nn.Linear(self.d_inner, self.d_model, bias=bias, **factory_kwargs)
-        self.out_normlh = nn.LayerNorm(self.d_inner)
-        self.out_projlh = nn.Linear(self.d_inner, self.d_model, bias=bias, **factory_kwargs)
-        self.out_normhh = nn.LayerNorm(self.d_inner)
-        self.out_projhh = nn.Linear(self.d_inner, self.d_model, bias=bias, **factory_kwargs)
-        self.dropout = nn.Dropout(dropout) if dropout > 0. else None
+        # 简化状态扫描
+        x_flat = x.view(B, self.d_inner, -1).transpose(1, 2)  # [B, L, D]
+        state_params = self.state_proj(x_flat)
+        state, gate = state_params.chunk(2, dim=-1)
 
-    @staticmethod
-    def dt_init(dt_rank, d_inner, dt_scale=1.0, dt_init="random", dt_min=0.001, dt_max=0.1, dt_init_floor=1e-4,
-                **factory_kwargs):
-        dt_proj = nn.Linear(dt_rank, d_inner, bias=True, **factory_kwargs)
+        # 状态变换
+        transformed_state = self.state_transform(state)
+        output = transformed_state * gate
 
-        # Initialize special dt projection to preserve variance at initialization
-        dt_init_std = dt_rank ** -0.5 * dt_scale
-        if dt_init == "constant":
-            nn.init.constant_(dt_proj.weight, dt_init_std)
-        elif dt_init == "random":
-            nn.init.uniform_(dt_proj.weight, -dt_init_std, dt_init_std)
-        else:
-            raise NotImplementedError
+        # 输出处理
+        output = output.transpose(1, 2).view(B, self.d_inner, H, W)
+        output = output.permute(0, 2, 3, 1)
+        output = self.out_norm(output)
+        output = output * F.silu(z)
+        output = self.out_proj(output)
 
-        # Initialize dt bias so that F.softplus(dt_bias) is between dt_min and dt_max
-        dt = torch.exp(
-            torch.rand(d_inner, **factory_kwargs) * (math.log(dt_max) - math.log(dt_min))
-            + math.log(dt_min)
-        ).clamp(min=dt_init_floor)
-        # Inverse of softplus: https://github.com/pytorch/pytorch/issues/72759
-        inv_dt = dt + torch.log(-torch.expm1(-dt))
-        with torch.no_grad():
-            dt_proj.bias.copy_(inv_dt)
-        # Our initialization would set all Linear.bias to zero, need to mark this one as _no_reinit
-        dt_proj.bias._no_reinit = True
+        return self.dropout(output)
 
-        return dt_proj
-
-    @staticmethod
-    def A_log_init(d_state, d_inner, copies=1, device=None, merge=True):
-        # S4D real initialization
-        A = repeat(
-            torch.arange(1, d_state + 1, dtype=torch.float32, device=device),
-            "n -> d n",
-            d=d_inner,
-        ).contiguous()
-        A_log = torch.log(A)  # Keep A_log in fp32
-        if copies > 1:
-            A_log = repeat(A_log, "d n -> r d n", r=copies)
-            if merge:
-                A_log = A_log.flatten(0, 1)
-        A_log = nn.Parameter(A_log)
-        A_log._no_weight_decay = True
-        return A_log
-
-    @staticmethod
-    def D_init(d_inner, copies=1, device=None, merge=True):
-        # D "skip" parameter
-        D = torch.ones(d_inner, device=device)
-        if copies > 1:
-            D = repeat(D, "n1 -> r n1", r=copies)
-            if merge:
-                D = D.flatten(0, 1)
-        D = nn.Parameter(D)  # Keep in fp32
-        D._no_weight_decay = True
-        return D
-
-    def forward_corehl(self, x: torch.Tensor):
-        self.selective_scan = selective_scan_fn
-        B, C, H, W = x.shape
-        L = H * W
-        K = 2
-        x_inv = torch.flip(x, dims=[-1])
-        xs = torch.stack([x.view(B, -1, L), x_inv.view(B, -1, L)], dim=1).view(B, 2, -1, L)
-        x_dbl = torch.einsum("b k d l, k c d -> b k c l", xs.view(B, K, -1, L), self.x_proj_hl_weight)
-        # x_dbl = x_dbl + self.x_proj_hl_bias.view(1, K, -1, 1)
-        dts, Bs, Cs = torch.split(x_dbl, [self.dt_rank, self.d_state, self.d_state], dim=2)
-        dts = torch.einsum("b k r l, k d r -> b k d l", dts.view(B, K, -1, L), self.dt_projs_hl_weight)
-        # dts = dts + self.dt_projs_hl_bias.view(1, K, -1, 1)
-        xs = xs.float().view(B, -1, L)  # (b, k * d, l)
-        dts = dts.contiguous().float().view(B, -1, L)  # (b, k * d, l)
-        Bs = Bs.float().view(B, K, -1, L)  # (b, k, d_state, l)
-        Cs = Cs.float().view(B, K, -1, L)  # (b, k, d_state, l)
-        Ds = self.Ds_hl.float().view(-1)  # (k * d)
-        As = -torch.exp(self.A_logs_hl.float()).view(-1, self.d_state)  # (k * d, d_state)
-        dt_projs_hl_bias = self.dt_projs_hl_bias.float().view(-1)  # (k * d)
-        out_y = self.selective_scan(
-            xs, dts,
-            As, Bs, Cs, Ds, z=None,
-            delta_bias=dt_projs_hl_bias,
-            delta_softplus=True,
-            return_last_state=False,
-        ).view(B, K, -1, L)
-        assert out_y.dtype == torch.float
-        inv_y = torch.flip(out_y[:, 1], dims=[-1])
-        return out_y[:, 0], inv_y
-
-    def forward_corelh(self, x: torch.Tensor):
-        self.selective_scan = selective_scan_fn
-        B, C, H, W = x.shape
-        L = H * W
-        K = 2
-        x_hwwh = torch.transpose(x, dim0=2, dim1=3).contiguous().view(B, -1, L)
-        x_inv_hwwh = torch.flip(x_hwwh, dims=[-1]).view(B, -1, L)
-        xs = torch.stack([x_hwwh, x_inv_hwwh], dim=1).view(B, 2, -1, L)
-        x_dbl = torch.einsum("b k d l, k c d -> b k c l", xs.view(B, K, -1, L), self.x_proj_lh_weight)
-        # x_dbl = x_dbl + self.x_proj_lh_bias.view(1, K, -1, 1)
-        dts, Bs, Cs = torch.split(x_dbl, [self.dt_rank, self.d_state, self.d_state], dim=2)
-        dts = torch.einsum("b k r l, k d r -> b k d l", dts.view(B, K, -1, L), self.dt_projs_lh_weight)
-        # dts = dts + self.dt_projs_lh_bias.view(1, K, -1, 1)
-        xs = xs.float().view(B, -1, L)  # (b, k * d, l)
-        dts = dts.contiguous().float().view(B, -1, L)  # (b, k * d, l)
-        Bs = Bs.float().view(B, K, -1, L)  # (b, k, d_state, l)
-        Cs = Cs.float().view(B, K, -1, L)  # (b, k, d_state, l)
-        Ds = self.Ds_lh.float().view(-1)  # (k * d)
-        As = -torch.exp(self.A_logs_lh.float()).view(-1, self.d_state)  # (k * d, d_state)
-        dt_projs_lh_bias = self.dt_projs_lh_bias.float().view(-1)  # (k * d)
-        out_y = self.selective_scan(
-            xs, dts,
-            As, Bs, Cs, Ds, z=None,
-            delta_bias=dt_projs_lh_bias,
-            delta_softplus=True,
-            return_last_state=False,
-        ).view(B, K, -1, L)
-        assert out_y.dtype == torch.float
-        wh_y = torch.transpose(out_y[:, 0].view(B, -1, W, H), dim0=2, dim1=3).contiguous().view(B, -1, L)
-        inv_y = torch.flip(out_y[:, 1], dims=[-1]).view(B, 1, -1, L)
-        invwh_y = torch.transpose(inv_y[:, 0].view(B, -1, W, H), dim0=2, dim1=3).contiguous().view(B, -1, L)
-        return wh_y, invwh_y
-
-    def diagonal_trans(self, x: torch.Tensor, H, W):
-        B, K, _, L = x.shape
-        assert L == H * W, "最后一个维度L必须等于H*W"
-        idx = torch.arange(H * W, device=x.device).reshape(H, W)
-        i_idx = torch.arange(H, device=x.device).reshape(-1, 1).expand(H, W)
-        j_idx = torch.arange(W, device=x.device).reshape(1, -1).expand(H, W)
-        diag_mask = (i_idx + j_idx)
-        sorted_idx = torch.argsort(diag_mask.view(-1))
-        diag_indices = torch.index_select(idx.view(-1), 0, sorted_idx)
-        x_flat = x.view(B, K, -1, H * W)
-        diag_flat = torch.index_select(x_flat, dim=3, index=diag_indices)
-        return diag_flat, diag_indices
-
-    def reverse_diagonal_trans(self, x: torch.Tensor, diag_indices):
-        B, K, _, L = x.shape
-        x_flat = x.view(B, K, -1, L)
-        reverse_indices = torch.argsort(diag_indices)
-        original_flat = torch.index_select(x_flat, dim=3, index=reverse_indices)
-        return original_flat
-
-    def forward_corehh(self, x: torch.Tensor):
-        self.selective_scan = selective_scan_fn
-        B, C, H, W = x.shape
-        L = H * W
-        K = 2
-        x_invhh = torch.flip(x, dims=[-1])
-        xs = torch.stack([x.view(B, -1, L), x_invhh.view(B, -1, L)], dim=1).view(B, 2, -1, L)
-        xs, diag_indices = self.diagonal_trans(xs, H, W)
-        x_dbl = torch.einsum("b k d l, k c d -> b k c l", xs.view(B, K, -1, L), self.x_proj_hh_weight)
-        # x_dbl = x_dbl + self.x_proj_hh_bias.view(1, K, -1, 1)
-        dts, Bs, Cs = torch.split(x_dbl, [self.dt_rank, self.d_state, self.d_state], dim=2)
-        dts = torch.einsum("b k r l, k d r -> b k d l", dts.view(B, K, -1, L), self.dt_projs_hh_weight)
-        # dts = dts + self.dt_projs_hh_bias.view(1, K, -1, 1)
-        xs = xs.float().view(B, -1, L)  # (b, k * d, l)
-        dts = dts.contiguous().float().view(B, -1, L)  # (b, k * d, l)
-        Bs = Bs.float().view(B, K, -1, L)  # (b, k, d_state, l)
-        Cs = Cs.float().view(B, K, -1, L)  # (b, k, d_state, l)
-        Ds = self.Ds_hh.float().view(-1)  # (k * d)
-        As = -torch.exp(self.A_logs_hh.float()).view(-1, self.d_state)  # (k * d, d_state)
-        dt_projs_hh_bias = self.dt_projs_hh_bias.float().view(-1)  # (k * d)
-        out_y = self.selective_scan(
-            xs, dts,
-            As, Bs, Cs, Ds, z=None,
-            delta_bias=dt_projs_hh_bias,
-            delta_softplus=True,
-            return_last_state=False,
-        ).view(B, K, -1, L)
-        assert out_y.dtype == torch.float
-        trans_y = self.reverse_diagonal_trans(out_y, diag_indices)
-        inv_y = torch.flip(trans_y[:, 1], dims=[-1])
-        return trans_y[:, 0], inv_y
-
-    def forward(self, x: torch.Tensor, **kwargs):
-        if self.scantype == 'hl':
-            B, H, W, C = x.shape
-            xz = self.in_proj(x)
-            x, z = xz.chunk(2, dim=-1)  # (b, h, w, d)
-            x = x.permute(0, 3, 1, 2).contiguous()
-            x = self.act(self.conv2d(x))  # (b, d, h, w)
-            yhl1, yhl2 = self.forward_corehl(x)
-            assert yhl1.dtype == torch.float32
-            yhl = yhl1 + yhl2
-            yhl = torch.transpose(yhl, dim0=1, dim1=2).contiguous().view(B, H, W, -1)
-            yhl = self.out_normhl(yhl)
-            yhl = yhl * F.silu(z)
-            outhl = self.out_projhl(yhl)
-            if self.dropout is not None:
-                outhl = self.dropout(outhl)
-            return outhl
-
-        if self.scantype == 'lh':
-            B, H, W, C = x.shape
-            xz = self.in_proj(x)
-            x, z = xz.chunk(2, dim=-1)  # (b, h, w, d)
-            x = x.permute(0, 3, 1, 2).contiguous()
-            x = self.act(self.conv2d(x))  # (b, d, h, w)
-            ylh1, ylh2 = self.forward_corelh(x)
-            assert ylh1.dtype == torch.float32
-            ylh = ylh1 + ylh2
-            ylh = torch.transpose(ylh, dim0=1, dim1=2).contiguous().view(B, H, W, -1)
-            ylh = self.out_normlh(ylh)
-            ylh = ylh * F.silu(z)
-            outlh = self.out_projlh(ylh)
-            if self.dropout is not None:
-                outlh = self.dropout(outlh)
-            return outlh
-
-        if self.scantype == 'hh':
-            B, H, W, C = x.shape
-            xz = self.in_proj(x)
-            x, z = xz.chunk(2, dim=-1)  # (b, h, w, d)
-            x = x.permute(0, 3, 1, 2).contiguous()
-            x = self.act(self.conv2d(x))  # (b, d, h, w)
-            yhh1, yhh2 = self.forward_corehh(x)
-            assert yhh1.dtype == torch.float32
-            yhh = yhh1 + yhh2
-            yhh = torch.transpose(yhh, dim0=1, dim1=2).contiguous().view(B, H, W, -1)
-            yhh = self.out_normhh(yhh)
-            yhh = yhh * F.silu(z)
-            outhh = self.out_proj(yhh)
-            if self.dropout is not None:
-                outhh = self.dropout(outhh)
-            return outhh
 
 
 class VSSBlock(nn.Module):
