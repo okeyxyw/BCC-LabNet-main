@@ -12,7 +12,7 @@
 
 # BCC-LabNet: A Decoupled Low-Light Image Enhancement Network for Interpretability and Strong Generalization
 
-> Training/validation/testing and synthesis scripts for **BCC‑LabNet**. The model operates in the **Lab** space, combining **Retinex** and attention to improve luminance/chroma consistency.
+> Training/validation/testing and synthesis scripts for **BCC‑LabNet**. The model operates in the **Lab** space, combining **Retinex** and attention to improve luminance/chroma consistency.**The experimental data below were obtained on BCCLabNetv3; subsequent updates reflect the corresponding results on BCCLabNetv6. The main difference between the two versions is that v6 introduces a pre-denoising module, MWBlock (FWBlock).**
 
 ![](overview.png)
 
