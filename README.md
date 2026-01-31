@@ -11,9 +11,9 @@
 ![](assets/DarkFace.gif)
 ![](assets/NonPair.gif)
 
-# BCC-LabNet：面向可解释与强泛化的解耦低光照图像增强网络
+# Consumer-Grade Embodied Robots Sensing and Computing Integrated Low-Light Image Enhancement for Perception Robustness
 
-> 本仓库包含 **BCC‑LabNet** 的训练、验证、测试与数据合成脚本，用于在低光照场景下对图像进行增强与细节恢复。模型在 Lab 颜色空间进行建模，并结合 Retinex 思想与注意力模块以提升亮度与色度一致性。**以下实验数据为BCCLabNetv3上所得，后续更新在BCCLabNetv6相关实验数据，两个版本差别主要v6引入了一个预去噪模块MWBlock(FWBlock)**。
+> Consumer-grade embodied robots (e.g., smart-home and service robots) require robust onboard perception under adverse illumination, while operating with constrained compute, memory, and power budgets. In low-light scenes, sensor noise, color shifts, and detail loss are easily exacerbated by RGB-space enhancement where luminance, contrast, and chroma are implicitly coupled, causing over-exposure, color bias, and reduced perception robustness for downstream tasks. This paper presents BCC-LabNet, a deployment-oriented low-light enhancement method in the CIE-Lab space that explicitly decouples brightness, contrast, and chroma via three lightweight branches, and introduces an FWBlock for targeted noise suppression in challenging scenes. The factorized design provides interpretable, component-wise corrections and improves cross-camera and cross-environment generalization without per-domain retraining. We evaluate image quality using PSNR/SSIM/LPIPS on paired benchmarks and NIQE/BRISQUE/UICM on unpaired real-world images, and quantify perception robustness using low-light object detection metrics (e.g., mAP) under fixed detector settings. Experiments on paired, unpaired, and cross-domain benchmarks show competitive restoration quality and consistent gains in downstream detection, indicating more stable task-relevant structures and colors. These results suggest that explicit Lab-space decoupling is a practical and reliable enhancement front end for perception robustness in consumer-grade embodied robots.。
 
 ![](overview.png)
 
