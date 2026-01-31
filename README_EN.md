@@ -4,15 +4,15 @@
 [中文](README.md) ｜ **English**
 
 </div>
-
+![](assets/qianyan.png)
 ![](assets/lolv1.gif)
 ![](assets/lsrw.gif)
 ![](assets/DarkFace.gif)
 ![](assets/NonPair.gif)
 
-# BCC-LabNet: A Decoupled Low-Light Image Enhancement Network for Interpretability and Strong Generalization
+# Consumer-Grade Embodied Robots Sensing and Computing Integrated Low-Light Image Enhancement for Perception Robustness
 
-> Training/validation/testing and synthesis scripts for **BCC‑LabNet**. The model operates in the **Lab** space, combining **Retinex** and attention to improve luminance/chroma consistency.**The experimental data below were obtained on BCCLabNetv3; subsequent updates reflect the corresponding results on BCCLabNetv6. The main difference between the two versions is that v6 introduces a pre-denoising module, MWBlock (FWBlock).**
+> Consumer-grade embodied robots (e.g., smart-home and service robots) require robust onboard perception under adverse illumination, while operating with constrained compute, memory, and power budgets. In low-light scenes, sensor noise, color shifts, and detail loss are easily exacerbated by RGB-space enhancement where luminance, contrast, and chroma are implicitly coupled, causing over-exposure, color bias, and reduced perception robustness for downstream tasks. This paper presents BCC-LabNet, a deployment-oriented low-light enhancement method in the CIE-Lab space that explicitly decouples brightness, contrast, and chroma via three lightweight branches, and introduces an FWBlock for targeted noise suppression in challenging scenes. The factorized design provides interpretable, component-wise corrections and improves cross-camera and cross-environment generalization without per-domain retraining. We evaluate image quality using PSNR/SSIM/LPIPS on paired benchmarks and NIQE/BRISQUE/UICM on unpaired real-world images, and quantify perception robustness using low-light object detection metrics (e.g., mAP) under fixed detector settings. Experiments on paired, unpaired, and cross-domain benchmarks show competitive restoration quality and consistent gains in downstream detection, indicating more stable task-relevant structures and colors. These results suggest that explicit Lab-space decoupling is a practical and reliable enhancement front end for perception robustness in consumer-grade embodied robots.。
 
 ![](overview.png)
 
