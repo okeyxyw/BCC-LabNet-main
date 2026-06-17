@@ -317,8 +317,8 @@ def main():
     # test_low = r'F:\data\sid\data\test\input'
     # test_high = r'F:\data\sid\data\test\target'
 
-    learning_rate = 2e-4
-    num_epochs = 1500
+    learning_rate = 1e-4
+    num_epochs = 500
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f'LR: {learning_rate}; Epochs: {num_epochs}')
 
