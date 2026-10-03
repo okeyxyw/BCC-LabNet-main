@@ -3,12 +3,12 @@
 
 **中文** ｜ [English](README_EN.md)
 
+</div>
+
 ## 📰 News
 
 - **[01-Oct-2026]** Our paper **“Low-Light Image Enhancement for Perception Stability in Consumer Vision Systems”** has been accepted by **IEEE Transactions on Consumer Electronics (TCE)**.
 
-
-</div>
 
 ![](assets/qianyan.png)
 ![](assets/lolv1.gif)
