@@ -5,6 +5,11 @@
 
 </div>
 
+## 📰 News
+
+- **[01-Oct-2026]** Our paper **“Low-Light Image Enhancement for Perception Stability in Consumer Vision Systems”** has been accepted by **IEEE Transactions on Consumer Electronics (TCE)**.
+
+
 ![](assets/qianyan.png)
 ![](assets/lolv1.gif)
 ![](assets/lsrw.gif)
@@ -16,6 +21,8 @@
 >Low-light visual perception remains a major challenge in consumer vision systems, including unmanned aerial vehicles, consumer robotic platforms, and edge imaging devices,where computation, memory bandwidth, and power consumption are tightly constrained. Existing deep enhancement models therefore often struggle to achieve real-time and deploymentfriendly performance. In addition, low-illumination conditions introduce severe sensor noise, insufffcient photon capture, and nonlinear imaging distortions, resulting in degraded contrast,color bias, and loss of structural details that further impair downstream vision tasks. To address these issues, we propose BCCLabNet, a lightweight and deployment-oriented low-light image enhancement network for real-time edge vision applications. The proposed method explicitly decouples brightness, contrast, and chroma in the CIE-Lab color space and processes them with three lightweight branches to improve representation stability and interpretability. A frequency-aware denoising module with adaptive gamma correction is introduced to enhance robustness under extreme low-light conditions, while a Lab-space attention mechanism and a Retinex-inspired reffnement module preserve structural consistency and local illumination ffdelity with low computational overhead. Extensive experiments on paired and unpaired low-light datasets show that BCC-LabNet achieves competitive performance in PSNR, SSIM, LPIPS, and no-reference metrics including NIQE, BRISQUE, and UICM. Moreover, downstream detection and tracking evaluations, together with onboard inference compatibility validation on Unitree Go1 and real-world UAV low-light detection deployment, support its practical edgedeployment capability. Overall, BCC-LabNet achieves a favorable trade-off between visual quality and computational efffciency.
 
 ![](overview.png)
+
+
 
 ---
 
