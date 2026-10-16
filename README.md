@@ -106,51 +106,6 @@ python test.py
 
 ---
 
-## 消融实验
-
-在 **LOLv2‑Real** 上验证核心模块。
-
-![表1. 在LOL‑v2‑Real数据集上的消融实验](assets/fig_7.png)
-
-> 说明：BCC 为**通道未压缩**；基线为仅三子网解耦；**未使用 GT‑Mean**。
-
----
-
-## 运行效率对比
-
-**3.17M 参数 / 3.76G FLOPs**，相对同档模型更省算力且保持竞争力。
-
-![表3. 模型复杂度对比](assets/fig_9.png)
-
-> 说明：**未使用 GT‑Mean**。
-
----
-
-## 对比实验
-
-LOL‑v1 / LOL‑v2‑Real / VisDrone / LSRW‑Huawei 的量化对比。最佳/次佳以 **粗体** 与 _下划线_ 标注。
-
-![表2. 定量比较](assets/fig_8.png)
-
-> 说明：**未使用 GT‑Mean**。
-
----
-
-## 泛化性实验
-
-采用 DICM、LIME、MEF、NPE、VV 等五个无参考低光数据集；在相同设置下 **NIQE = 4.1215**、**UICM = 0.9776**。
-
-![](assets/fig_10.png)
-
-> 说明：**未使用 GT‑Mean**。
-
-跨数据集：在 LOL‑v1 训练，在 LoLI‑Street 抽取 200 图测试，无需微调。
-
-![](assets/fig_11.png)
-
-> 说明：**未使用 GT‑Mean**。
-
----
 
 ## 合成低光数据（可选）
 
