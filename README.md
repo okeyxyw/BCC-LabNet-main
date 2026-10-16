@@ -8,8 +8,7 @@
 ## 📰 News
 
 - **[01-Oct-2026]** Our paper **“Low-Light Image Enhancement for Perception Stability in Consumer Vision Systems”** has been accepted by **IEEE Transactions on Consumer Electronics (TCE)**.
-- [Low-Light Image Enhancement for Perception Stability in Consumer Vision Systems](https://doi.org/10.1109/TCE.2026.3742337). *IEEE Transactions on Consumer Electronics*, 2026.
-
+- **[13-Oct-2026]** **Published**: Our paper *[Low-Light Image Enhancement for Perception Stability in Consumer Vision Systems](https://doi.org/10.1109/TCE.2026.3742337)* has been published in *IEEE Transactions on Consumer Electronics*, 2026. DOI: [10.1109/TCE.2026.3742337](https://doi.org/10.1109/TCE.2026.3742337).
 ![](assets/qianyan.png)
 ![](assets/lolv1.gif)
 ![](assets/lsrw.gif)
