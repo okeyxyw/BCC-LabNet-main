@@ -105,52 +105,6 @@ Saves outputs and **PSNR/SSIM**; includes **NIQE**; for low‑only use `LowOnlyD
 
 ---
 
-## Ablation Studies
-
-Ablations on **LOLv2‑Real**.
-
-![Ablation](assets/fig_7.png)
-
-> BCC is channel‑uncompressed; baseline is three‑branch only; **no GT‑Mean**.
-
----
-
-## Efficiency Comparison
-
-**3.17M params / 3.76G FLOPs**, competitive quality with lower compute than many peers.
-
-![Complexity](assets/fig_9.png)
-
-> **No GT‑Mean**.
-
----
-
-## Comparative Results
-
-LOL‑v1 / LOL‑v2‑Real / VisDrone / LSRW‑Huawei quantitative comparison.
-
-![Comparison](assets/fig_8.png)
-
-> **No GT‑Mean**.
-
----
-
-## Generalization Experiments
-
-Five unpaired no‑ref datasets (DICM, LIME, MEF, NPE, VV); under the same settings **NIQE = 4.1215**, **UICM = 0.9776**.
-
-![](assets/fig_10.png)
-
-> **No GT‑Mean**.
-
-Cross‑dataset: train on LOL‑v1, test on 200 LoLI‑Street images without fine‑tuning.
-
-![](assets/fig_11.png)
-
-> **No GT‑Mean**.
-
----
-
 ## Synthetic Low‑Light Data (Optional)
 
 `synthesize_low_light.py`: simple darkening + noise, or realistic non‑uniform darkening with factor maps saved.
